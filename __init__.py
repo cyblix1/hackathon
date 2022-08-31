@@ -5,7 +5,7 @@ from email.message import Message
 from mimetypes import init
 from pydoc import render_doc
 from tkinter import Image
-from tkinter.tix import Tree
+# from tkinter.tix import Tree
 from flask import Flask, render_template, request, make_response, redirect, url_for, session,flash, json
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
@@ -73,6 +73,19 @@ auto_email = app.config['EMAIL_ADMIN']
 email_key = app.config['EMAIL_ADMIN_KEY']
 stripe.api_key = app.config['STRIPE_SECRET_KEY']
 
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = 'static/uploads/'
+
+app.secret_key = "secret key"
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 
@@ -2290,6 +2303,76 @@ def check_logs():
 @app.route('/homemain')
 def homemain():
     return render_template('homemain.html')
+
+@app.route('/donation_page')
+def donation_page():
+    form = Donation_Products()
+    return render_template('donation_page.html',form = form)
+
+@app.route('/donation_page_create',methods=['POST','GET'])
+def donation_page_create():
+    form = Donation_Products()
+    time = datetime.utcnow()
+
+    try:
+        if form.validate_on_submit():
+            product_id = uuid.uuid4()
+            name = form.product_name.data
+            price = form.price.data
+            description = form.description.data
+            category = form.category.data
+
+            file = request.files['file']
+            if file.filename == '':
+                flash('No image selected for uploading')
+                return redirect(request.url)
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                pass
+            else:
+                flash('Allowed image types are - png, jpg, jpeg, gif', category='danger')
+                return redirect(request.url)
+
+
+            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('INSERT INTO donation_products VALUES (%s, %s, %s, %s,%s,%s)', (product_id, name, price, description,filename,category))
+            cursor.execute(
+                'INSERT INTO logs_info (log_id ,date_created,customer_id,description) VALUES (NULL,%s,NULL,concat("product_added_success : Product ID (",%s,")"))',
+                (time, product_id))
+            db.connection.commit()
+            flash("Product Added Successfully!", category="success")
+            return redirect(url_for('donation_page'))
+
+    except Exception:
+        flash("Error Adding Products", category="danger")
+        time = datetime.utcnow()
+        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute(
+            'INSERT INTO logs_warning (log_id ,date_created,customer_id,description) VALUES (NULL,%s,NULL,concat("product_added_failed : Admin ID (",%s,")"))',
+            (time, 0))
+
+        db.connection.commit()
+        return redirect(url_for('donation_page'))
+
+    return render_template('donation_page.html', form=form)
+
+@app.route('/donation_market')
+def donation_market():
+    try:
+        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+        if cursor:
+            cursor.execute('SELECT * FROM donation_products')
+            products = cursor.fetchall()
+
+    except IOError:
+        print('Database problem!')
+    except Exception as e:
+        print(f'Error while connecting to MySQL,{e}')
+
+    return render_template('donation_market.html', items=products)
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
