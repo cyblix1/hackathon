@@ -137,3 +137,12 @@ class Create_Message(FlaskForm):
 class Update_Message(FlaskForm):
     description = TextAreaField(label='Description', validators=[DataRequired(), Length(min=1, max=1000)])
     submit = SubmitField(label='Add Item')
+
+class Donation_Products(FlaskForm):
+    product_name = StringField(label='Name', validators=[Length(min=1, max=100), DataRequired()])
+    description = StringField(label='Description', validators=[DataRequired(), Length(min=1, max=1000)])
+    price = StringField(label='Price', validators=[DataRequired(), Length(min=1)])
+    category = SelectField("Category", validators=[DataRequired(message="Please Select a category")],
+                           choices=[("Laptop"),
+                                    ("Battery"), ("Phone")])
+    submit = SubmitField(label='Add Item')

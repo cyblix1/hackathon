@@ -47,5 +47,5 @@ stripe==4.1.0
 twilio==7.12.1
 tzlocal==2.0.0
 urllib3==1.26.10
-Werkzeug==2.1.2
+Werkzeug==2.2.2
 WTForms==3.0.1
