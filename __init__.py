@@ -2342,7 +2342,7 @@ def donation_page_create():
                 (time, product_id))
             db.connection.commit()
             flash("Product Added Successfully!", category="success")
-            return redirect(url_for('donation_page'))
+            return redirect(url_for('donation_market'))
 
     except Exception:
         flash("Error Adding Products", category="danger")
