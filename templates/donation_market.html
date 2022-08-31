@@ -58,19 +58,15 @@
   <header id="header" class="header d-flex align-items-center">
 
     <div class="container-fluid container-xl d-flex align-items-center justify-content-between">
-      <a href="index.html" class="logo d-flex align-items-center">
+      <a href="{{ url_for('homemain')}}" class="logo d-flex align-items-center">
         <!-- Uncomment the line below if you also wish to use an image logo -->
         <!-- <img src="static/img/logo.png" alt=""> -->
         <h1>Impact<span>.</span></h1>
       </a>
       <nav id="navbar" class="navbar">
         <ul>
-          <li><a href="#hero">Home</a></li>
-          <li><a href="#about">About</a></li>
-          <li><a href="#services">Services</a></li>
-          <li><a href="#portfolio">Portfolio</a></li>
-          <li><a href="#team">Team</a></li>
-          <li><a href="blog.html">Blog</a></li>
+
+          <li><a href="{{ url_for('donation_market')}}">Marketplace</a></li>
           <li class="dropdown"><a href="#"><span>Drop Down</span> <i class="bi bi-chevron-down dropdown-indicator"></i></a>
             <ul>
               <li><a href="#">Drop Down 1</a></li>
@@ -88,7 +84,7 @@
               <li><a href="#">Drop Down 4</a></li>
             </ul>
           </li>
-          <li><a href="#contact">Contact</a></li>
+          <li><a href="{{ url_for('donation_page_create')}}">Donate Now</a></li>
         </ul>
       </nav><!-- .navbar -->
 
@@ -114,8 +110,11 @@
       <div class="container" data-aos="fade-up">
 
         <div class="section-header">
-          <h2>Donation Place</h2>
+          <h2>Market Place</h2>
           <p>Quam sed id excepturi ccusantium dolorem ut quis dolores nisi llum nostrum enim velit qui ut et autem uia reprehenderit sunt deleniti</p>
+                              <BR>
+          <div class="text-center"><button type="submit"><a href="{{ url_for('product_market_create')}}">ADD PRODUCTS</a></button></div>
+
         </div>
 
         <div class="portfolio-isotope" data-portfolio-filter="*" data-portfolio-layout="masonry" data-portfolio-sort="original-order" data-aos="fade-up" data-aos-delay="100">
@@ -133,12 +132,12 @@
           <div class="row gy-4 portfolio-container">
             {% for i in items %}
 
-            <div class="col-xl-4 col-md-6 portfolio-item filterDiv {{i.options}}">
+            <div class="col-xl-4 col-md-6 portfolio-item">
               <div class="portfolio-wrap">
                 <a href="static/uploads/{{i.photo}}" data-gallery="portfolio-gallery-app" class="glightbox"><img src="static/uploads/{{i.photo}}" class="img-fluid" alt=""></a>
                 <div class="portfolio-info">
-                  <h4><a href="portfolio-details.html" title="More Details">{{i.product_name}}</a></h4>
-                  <p>{{i.description}} , {{i.price}} , {{i.options}}</p>
+                  <h4><a href="{{ url_for('donation_market_products',id=i.product_id)}}" title="More Details">{{i.product_name}}</a></h4>
+                  <p>{{i.description}} , {{i.price}}</p>
                 </div>
               </div>
             </div><!-- End Portfolio Item -->

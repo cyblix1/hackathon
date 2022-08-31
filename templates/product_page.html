@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
 
 
-  <title>Donation Page</title>
+  <title>Product Page</title>
   <meta content="" name="description">
   <meta content="" name="keywords">
 
@@ -55,7 +55,7 @@
     </div>
   </section><!-- End Top Bar -->
 
-<header id="header" class="header d-flex align-items-center">
+ <header id="header" class="header d-flex align-items-center">
 
     <div class="container-fluid container-xl d-flex align-items-center justify-content-between">
       <a href="{{ url_for('homemain')}}" class="logo d-flex align-items-center">
@@ -113,8 +113,8 @@
       <div class="container" data-aos="fade-up">
 
         <div class="section-header">
-          <h2>Donation Page</h2>
-          <p>Donate any reusable electronics that will help save the environment to fight against climate change </p>
+          <h2>Product Page</h2>
+          <p>Sell your products onto the market for others to buy your second-hand parts! </p>
         </div>
 
         <div class="row gx-lg-0 gy-4">
@@ -158,13 +158,14 @@
           </div>
 
           <div class="col-lg-8">
-            <form action="{{url_for('donation_page_create')}}" method="post" enctype="multipart/form-data" class="php-email-form" >
+            <form action="{{url_for('product_market_create')}}" method="post" enctype="multipart/form-data" class="php-email-form" >
                                           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               <div class="row">
                 <div class="col-md-6 form-group">
                   {{ form.product_name(class='form-control form-control-user', placeholder='Product Name') }}
                 </div>
                 <div class="col-md-6 form-group mt-3 mt-md-0">
+                                        {{ form.price(class='form-control form-control-user', placeholder='Product Price') }}
                 </div>
               </div>
 
