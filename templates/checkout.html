@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Shopping Cart{% endblock %}
+
+{% block content %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{category}} alert-dismissable" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="close">
+                <span aria-hidden="true">x</span>
+            </button>
+            {{message}}
+        </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+<section class="section-content padding-y">
+<div class="container" style="margin: 100px auto 100px auto;">
+
+<div class="row">
+    <main class="col-md-9">
+<div class="card" style="padding: 20px 20px 5px 20px; box-shadow: rgb(209, 209, 209) 1px 1px 25px 1px; border-top: 10px solid #2A27A2;">
+
+<table class="table table-borderless table-shopping-cart">
+<thead class="text-muted">
+<tr class="small text-uppercase">
+  <th scope="col">Product</th>
+  <th scope="col" width="120">Description</th>
+  <th scope="col" width="120">Price</th>
+  <th scope="col" class="text-right" width="200"> </th>
+
+</tr>
+</thead>
+<tbody>
+{% for i in cart_items %}
+<tr>
+
+    <td>
+        <figure class="itemside">
+            <div class="aside"><img src="static/images/vala.png" class="img-sm" style="height:40px"></div>
+            <figcaption class="info" style="margin: 10px auto auto auto;">
+                <a href=""></a>
+                <a href=""></a>
+                <a href="" class="title text-dark">{{i.product_name}}</a>
+            </figcaption>
+        </figure>
+    </td>
+
+    <td>
+        <div class="itemside">
+            <var class="price">{{i.description}}</var>
+
+        </div> <!-- price-wrap .// -->
+    </td>
+
+    <td>
+        <div class="price-wrap">
+            <var class="price">${{ "{:.2f}".format(i.price)}}</var>
+
+        </div> <!-- price-wrap .// -->
+    </td>
+    <td>
+    <form action="{{ url_for('delete_checkout_products',id=i.product_id)}}", method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn-danger btn-xs btn-sm" onclick="return confirm('Are you sure to delete?')">Delete</button>
+    </form>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+
+<div class="card-body border-top">
+{% if status['sc_status'] == 1 %}
+    {% if cart_items|length > 0  %}
+        <a href="#" id="buy_now_btn"  class="btn btn-primary float-md-right"><i class="fa fa-chevron-right"></i> Proceed To Payment</a>
+        <a href="{{ url_for('market') }}" class="btn btn-light"> <i class="fa fa-chevron-left"></i> Continue shopping </a>
+    {% elif cart_items|length == 0 %}
+        <a href="{{ url_for('market') }}" class="btn btn-light"> <i class="fa fa-chevron-left"></i> Continue shopping </a>
+    {% endif %}
+{% else %}
+    {% if cart_items|length > 0  %}
+        <a href="{{ url_for('checkout_verification2') }}"  class="btn btn-primary float-md-right"><i class="fa fa-chevron-right"></i> Proceed To Verification</a>
+        <a href="{{ url_for('market') }}" class="btn btn-light"> <i class="fa fa-chevron-left"></i> Continue shopping </a>
+    {% elif cart_items|length == 0 %}
+        <a href="{{ url_for('market') }}" class="btn btn-light"> <i class="fa fa-chevron-left"></i> Continue shopping </a>
+    {% endif %}
+{% endif %}
+
+</div>
+</div> <!-- card.// -->
+
+<div class="alert alert-success mt-3">
+    <p class="icontext"><i class="icon text-success fa fa-truck"></i> Free Delivery within 1-2 weeks</p>
+</div>
+        {% for i in total %}
+    </main> <!-- col.// -->
+    <aside class="col-md-3" style="box-shadow: rgb(209, 209, 209) 1px 1px 25px 1px; border-top: 10px solid #2A27A2;">
+        <div class="card mb-3">
+
+        </div>  <!-- card .// -->
+        <div class="card">
+            <div class="card-body">
+                    <dl class="dlist-align">
+                      <dt>Total:</dt>
+                        {% if cart_items|length > 0  %}
+                        <dd class="text-right  h5"><strong>${{i.price}}</strong></dd>
+                        {% elif cart_items|length == 0 %}
+                        <dd class="text-right  h5"><strong> No Items </strong></dd>
+                        {% endif %}
+
+
+                    </dl>
+                    <hr>
+                    <p class="text-center mb-3">
+                        <img src="../static/images/vala.png" height="26">
+                    </p>
+
+            </div> <!-- card-body.// -->
+        </div>  <!-- card .// -->
+    </aside> <!-- col.// -->
+</div>
+
+</div> <!-- container .//  -->
+</section>
+{% endfor %}
+
+<!-- More Info Modal -->
+{% for i in cart_items %}
+<div class="modal fade" id="Modal-MoreInfo--{{i}}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content" style=" left: auto; max-width: 700px; margin: 100px auto auto auto;">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">{{i.product_name}}</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <img class="card-img-top" style="max-height:300px" src="static/images/vala.png" alt="Item Image" />
+                    <hr>
+                    <p>Name: {{i.product_name}}</p>
+                    <p>Description: {{i.description}}</p>
+                    <p>Price: ${{ "{:.2f}".format(i.price) }}</p>
+                  </div>
+                   <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+
+                    </div>
+                </div>
+
+            </div>
+</div>
+
+      <script src="https://js.stripe.com/v3/"></script>
+      <script>
+        const checkout_public_key = '{{checkout_public_key}}';
+        const checkout_session_id = '{{checkout_session_id}}';
+      </script>
+      <script src="{{ url_for('static', filename='script-no-ajax.js') }}"></script>
+
+{% endfor %}
+
+{% endblock %}
