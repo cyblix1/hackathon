@@ -1931,7 +1931,15 @@ section {
   .hero {
     background-attachment: fixed;
   }
+  .video-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
 }
+}
+
 
 .hero h2 {
   font-size: 48px;
