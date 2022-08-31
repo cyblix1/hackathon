@@ -88,7 +88,7 @@
               <li><a href="#">Drop Down 4</a></li>
             </ul>
           </li>
-          <li><a href="#contact">Contact</a></li>
+          <li><a href="#contact">Donation Page</a></li>
         </ul>
       </nav><!-- .navbar -->
 
@@ -115,7 +115,7 @@
 
         <div class="section-header">
           <h2>Donation Page</h2>
-          <p>Nulla dolorum nulla nesciunt rerum facere sed ut inventore quam porro nihil id ratione ea sunt quis dolorem dolore earum</p>
+          <p>Donate any reusable electronics that will help save the environment to fight against climate change </p>
         </div>
 
         <div class="row gx-lg-0 gy-4">
@@ -127,7 +127,7 @@
                 <i class="bi bi-geo-alt flex-shrink-0"></i>
                 <div>
                   <h4>Location:</h4>
-                  <p>A108 Adam Street, New York, NY 535022</p>
+                  <p>180 Ang Mo Kio Ave 8, Singapore 569830</p>
                 </div>
               </div><!-- End Info Item -->
 
@@ -143,7 +143,7 @@
                 <i class="bi bi-phone flex-shrink-0"></i>
                 <div>
                   <h4>Call:</h4>
-                  <p>+1 5589 55488 55</p>
+                  <p>+65 8880 2783</p>
                 </div>
               </div><!-- End Info Item -->
 
@@ -166,22 +166,24 @@
                   {{ form.product_name(class='form-control form-control-user', placeholder='Product Name') }}
                 </div>
                 <div class="col-md-6 form-group mt-3 mt-md-0">
-                                        {{ form.price(class='form-control form-control-user', placeholder='Product Price') }}
                 </div>
               </div>
-              <div class="form-group mt-3">
-              </div>
+
               <div class="form-group mt-3">
                 {{ form.description(class='form-control form-control-user', placeholder='Product Description') }}
               </div>
 
               <div class="form-group mt-3">
                   <p>
+                      <p>Take photos of your products for inspection!</p>
                       <input type="file" name="file" class="form-control" autocomplete="off" required>
+
+                      (File has to be in PNG , JPEG)
                   </p>
               </div>
               <div class="form-group mt-3">
-                {{ form.category(class='form-control form-control-user', placeholder='Security Question') }}
+                  Category:
+                {{ form.category(class='form-control form-control-user') }}
               </div>
 
               <div class="my-3">

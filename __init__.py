@@ -2312,13 +2312,10 @@ def donation_page():
 @app.route('/donation_page_create',methods=['POST','GET'])
 def donation_page_create():
     form = Donation_Products()
-    time = datetime.utcnow()
-
     try:
         if form.validate_on_submit():
             product_id = uuid.uuid4()
             name = form.product_name.data
-            price = form.price.data
             description = form.description.data
             category = form.category.data
 
@@ -2336,23 +2333,14 @@ def donation_page_create():
 
 
             cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('INSERT INTO donation_products VALUES (%s, %s, %s, %s,%s,%s)', (product_id, name, price, description,filename,category))
-            cursor.execute(
-                'INSERT INTO logs_info (log_id ,date_created,customer_id,description) VALUES (NULL,%s,NULL,concat("product_added_success : Product ID (",%s,")"))',
-                (time, product_id))
+            cursor.execute('INSERT INTO donation VALUES (%s, %s, %s, %s,%s)', (product_id, name, filename,description,category))
+
             db.connection.commit()
-            flash("Product Added Successfully!", category="success")
+            flash("Product Donated Successfully!", category="success")
             return redirect(url_for('donation_market'))
 
     except Exception:
         flash("Error Adding Products", category="danger")
-        time = datetime.utcnow()
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute(
-            'INSERT INTO logs_warning (log_id ,date_created,customer_id,description) VALUES (NULL,%s,NULL,concat("product_added_failed : Admin ID (",%s,")"))',
-            (time, 0))
-
-        db.connection.commit()
         return redirect(url_for('donation_page'))
 
     return render_template('donation_page.html', form=form)
@@ -2362,19 +2350,91 @@ def donation_market():
     try:
         cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
         if cursor:
-            cursor.execute('SELECT * FROM donation_products')
-            products = cursor.fetchall()
+            cursor.execute('SELECT * FROM donation')
+            donation = cursor.fetchall()
 
     except IOError:
         print('Database problem!')
     except Exception as e:
         print(f'Error while connecting to MySQL,{e}')
 
-    return render_template('donation_market.html', items=products)
+    return render_template('donation_market.html', items=donation)
+
+@app.route('/product_market_create',methods=['POST','GET'])
+def product_market_create():
+    form = Create_Market_Products()
+    try:
+        if form.validate_on_submit():
+            product_id = uuid.uuid4()
+            name = form.product_name.data
+            description = form.description.data
+            price = form.price.data
+            category = form.category.data
+
+            file = request.files['file']
+            if file.filename == '':
+                flash('No image selected for uploading')
+                return redirect(request.url)
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                pass
+            else:
+                flash('Allowed image types are - png, jpg, jpeg, gif', category='danger')
+                return redirect(request.url)
+
+
+            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('INSERT INTO product VALUES (%s,%s, %s, %s, %s,%s)', (product_id, name,price, description,filename,category))
+
+            db.connection.commit()
+            flash("Product Added Successfully!", category="success")
+            return redirect(url_for('donation_market'))
+
+    except Exception:
+        flash("Error Adding Products", category="danger")
+        return redirect(url_for('donation_page'))
+
+    return render_template('product_page.html', form=form)
+
+# @app.route('/product_market')
+# def product_market():
+#     try:
+#         cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+#         if cursor:
+#             cursor.execute('SELECT * FROM product')
+#             products = cursor.fetchall()
+#
+#     except IOError:
+#         print('Database problem!')
+#     except Exception as e:
+#         print(f'Error while connecting to MySQL,{e}')
+#
+#     return render_template('donation_market.html', items=products)
 
 @app.route('/testmain')
 def testmain():
     return render_template('testmain.html')
+
+@app.route('/donation_market_products/<id>')
+def donation_market_products(id):
+    session['p_id'] = id
+    return redirect(url_for('donation_market_products_indv'))
+
+@app.route('/donation_market_products_indv')
+def donation_market_products_indv():
+    try:
+        id = session['p_id']
+        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM donation WHERE donation_id = %s',[id])
+        indv_products = cursor.fetchall()
+        db.connection.commit()
+        session.pop('p_id', None)
+        return render_template('view_products.html', items=indv_products)
+    except:
+        flash("Click on Products you want to view", category='danger')
+        return redirect(url_for('donation_market'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

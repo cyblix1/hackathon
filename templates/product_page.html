@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
 
 
-  <title>Donation Page</title>
+  <title>Product Page</title>
   <meta content="" name="description">
   <meta content="" name="keywords">
 
@@ -88,7 +88,7 @@
               <li><a href="#">Drop Down 4</a></li>
             </ul>
           </li>
-          <li><a href="#contact">Contact</a></li>
+          <li><a href="#contact">Donation Page</a></li>
         </ul>
       </nav><!-- .navbar -->
 
@@ -109,51 +109,97 @@
     {% endif %}
     {% endwith %}
 
-  <!-- ======= Portfolio Section ======= -->
-    <section id="portfolio" class="portfolio sections-bg">
+    <!-- ======= Contact Section ======= -->
+    <section id="contact" class="contact">
       <div class="container" data-aos="fade-up">
 
         <div class="section-header">
-          <h2>Donation Place</h2>
-          <p>Quam sed id excepturi ccusantium dolorem ut quis dolores nisi llum nostrum enim velit qui ut et autem uia reprehenderit sunt deleniti</p>
+          <h2>Product Page</h2>
+          <p>Sell your products onto the market for others to buy your second-hand parts! </p>
         </div>
 
-        <div class="portfolio-isotope" data-portfolio-filter="*" data-portfolio-layout="masonry" data-portfolio-sort="original-order" data-aos="fade-up" data-aos-delay="100">
+        <div class="row gx-lg-0 gy-4">
 
-          <div>
-            <ul class="portfolio-flters">
-              <li data-filter="filterSelection('all')" class="filter-active">All</li>
-              <li data-filter=".filter-app">App</li>
-              <li data-filter="filterSelection('Laptop')">Product</li>
-              <li data-filter=".filter-branding">Branding</li>
-              <li data-filter=".filter-books">Books</li>
-            </ul><!-- End Portfolio Filters -->
+          <div class="col-lg-4">
+
+            <div class="info-container d-flex flex-column align-items-center justify-content-center">
+              <div class="info-item d-flex">
+                <i class="bi bi-geo-alt flex-shrink-0"></i>
+                <div>
+                  <h4>Location:</h4>
+                  <p>180 Ang Mo Kio Ave 8, Singapore 569830</p>
+                </div>
+              </div><!-- End Info Item -->
+
+              <div class="info-item d-flex">
+                <i class="bi bi-envelope flex-shrink-0"></i>
+                <div>
+                  <h4>Email:</h4>
+                  <p>info@example.com</p>
+                </div>
+              </div><!-- End Info Item -->
+
+              <div class="info-item d-flex">
+                <i class="bi bi-phone flex-shrink-0"></i>
+                <div>
+                  <h4>Call:</h4>
+                  <p>+65 8880 2783</p>
+                </div>
+              </div><!-- End Info Item -->
+
+              <div class="info-item d-flex">
+                <i class="bi bi-clock flex-shrink-0"></i>
+                <div>
+                  <h4>Open Hours:</h4>
+                  <p>Mon-Sat: 11AM - 23PM</p>
+                </div>
+              </div><!-- End Info Item -->
+            </div>
+
           </div>
 
-          <div class="row gy-4 portfolio-container">
-            {% for i in items %}
-
-            <div class="col-xl-4 col-md-6 portfolio-item filterDiv {{i.options}}">
-              <div class="portfolio-wrap">
-                <a href="static/uploads/{{i.donation_photo}}" data-gallery="portfolio-gallery-app" class="glightbox"><img src="static/uploads/{{i.donation_photo}}" class="img-fluid" alt=""></a>
-                <div class="portfolio-info">
-                  <h4><a href="{{ url_for('donation_market_products',id=i.donation_id)}}" title="More Details">{{i.donation_name}}</a></h4>
-                  <p>{{i.donation_desc}} , {{i.options}}</p>
+          <div class="col-lg-8">
+            <form action="{{url_for('donation_page_create')}}" method="post" enctype="multipart/form-data" class="php-email-form" >
+                                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <div class="row">
+                <div class="col-md-6 form-group">
+                  {{ form.product_name(class='form-control form-control-user', placeholder='Product Name') }}
+                </div>
+                <div class="col-md-6 form-group mt-3 mt-md-0">
+                                        {{ form.price(class='form-control form-control-user', placeholder='Product Price') }}
                 </div>
               </div>
-            </div><!-- End Portfolio Item -->
-            {% endfor %}
-          </div>
 
+              <div class="form-group mt-3">
+                {{ form.description(class='form-control form-control-user', placeholder='Product Description') }}
+              </div>
+
+              <div class="form-group mt-3">
+                  <p>
+                      <p>Take photos of your products for inspection!</p>
+                      <input type="file" name="file" class="form-control" autocomplete="off" required>
+
+                      (File has to be in PNG , JPEG)
+                  </p>
+              </div>
+              <div class="form-group mt-3">
+                  Category:
+                {{ form.category(class='form-control form-control-user') }}
+              </div>
+
+              <div class="my-3">
+                <div class="loading">Loading</div>
+                <div class="error-message"></div>
+                <div class="sent-message">Your message has been sent. Thank you!</div>
+              </div>
+              <div class="text-center"><button type="submit">ADD PRODUCTS</button></div>
+            </form>
+          </div><!-- End Contact Form -->
 
         </div>
 
       </div>
-    </section><!-- End Portfolio Section -->
-
-
-
-
+    </section><!-- End Contact Section -->
 
   </main><!-- End #main -->
 
@@ -239,8 +285,6 @@
   <script src="static/vendor2/purecounter/purecounter_vanilla.js"></script>
   <script src="static/vendor2/swiper/swiper-bundle.min.js"></script>
   <script src="static/vendor2/isotope-layout/isotope.pkgd.min.js"></script>
-  <script src="static/vendor2/isotope-layout/isotope.pkgd.min.js"></script>
-  <script src="static/vendor2/product_category.js"></script>
 <!--  <script src="static/vendor2/php-email-form/validate.js"></script>-->
 
   <!-- Template Main JS File -->
