@@ -2720,3 +2720,7 @@ section {
 .footer .credits a {
   color: #fff;
 }
+
+.alert {
+      margin-bottom: 0px;
+    }

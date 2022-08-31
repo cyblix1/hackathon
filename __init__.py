@@ -195,27 +195,9 @@ def register():
 
     if form.is_submitted() and request.method == 'POST' and RecaptchaField != NULL:
         name = form.name.data
-        question = form.question.data
-        if question == 'Where did your parents meet?':
-            question_number = 1
-        elif question == 'What city did you first go to college?':
-            question_number = 2
-        else:
-            question_number = 3
-        answer = form.answer.data
-        validate_ans = Validations.validate_answer(answer)
-        if validate_ans is True:
-            pass
-        else:
-            flash('Answer is unacceptable',category='danger')
-
-
         password = form.password1.data
-        hashpassword = bcrypt2.generate_password_hash(password)
         password2 = form.password2.data
         email = form.email.data
-        time = datetime.utcnow()
-        password_age = 4
 
         if password != password2:
             flash('passwords do not match',category='danger')
@@ -228,12 +210,7 @@ def register():
             db.connection.commit()
             if email != "admin@gmail.com":
                 if email_check is None:
-                    cursor.execute('INSERT INTO customer_accounts VALUES (NULL,%s,%s,%s,%s,%s,%s,%s,%s)',(name,email,question_number,answer,hashpassword,password_age,time,0))
-                    db.connection.commit()
-                    cursor.execute('SELECT customer_id from customer_accounts WHERE email = %s', [email])
-                    customer_id_email = cursor.fetchone()
-                    db.connection.commit()
-                    cursor.execute('INSERT INTO logs_info (log_id ,date_created,customer_id,description) VALUES (NULL,%s,%s,concat("authn_register_success : User ID (",%s,")"))',(time, customer_id_email["customer_id"], customer_id_email["customer_id"]))
+                    cursor.execute('INSERT INTO customer_accounts VALUES (NULL,%s,%s,%s)',(name,email,password))
                     db.connection.commit()
                     flash('Account Successfully Created ',category='success')
                     return redirect(url_for('login'))
@@ -251,524 +228,56 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm(request.form)
-    if request.method == 'POST':
-        # Create variables for easy access
-        email = form.email.data
-        password = form.password1.data
-        login_time = datetime.utcnow()
-        # check if its staff account
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        # decryption later + salted hashing + login history
-        # Check if account exists using MySQL
-        cursor.execute('SELECT * FROM customer_accounts WHERE email = %s', [email])
-        # Fetch one record and return result
-        account = cursor.fetchone()
+    if 'loggedin' in session:
+        flash('You are logged in !! ', category='success')
+        return redirect(url_for('homemain'))
+    else:
+        if request.method == 'POST':
+            # Create variables for easy access
+            email = form.email.data
+            password = form.password1.data
+            # check if its staff account
+            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+            # decryption later + salted hashing + login history
+            # Check if account exists using MySQL
+            cursor.execute('SELECT * FROM customer_accounts WHERE email = %s', [email])
+            # Fetch one record and return result
+            account = cursor.fetchone()
 
-        if account:
-            id = account['customer_id']
-            #first checks if account is enabled
-            cursor.execute('SELECT status FROM customer_accounts WHERE customer_id = %s ', [id])
-            i = cursor.fetchone()
-            if i['status'] == 0:
-                pass
-            else:
-                flash('Account is disabled, please contact staff!',category='danger')
-                return redirect(url_for('login'))
-            cursor.execute(
-                'SELECT max(failed_attempt_tries) AS failed_try from login_limitations where customer_id = %s ', [id])
-            check_tries = cursor.fetchone()
-            if check_tries['failed_try'] is None:
-                user_hashpwd = account['hashed_pw']
-                if bcrypt2.check_password_hash(user_hashpwd, password):
-                    id = account['customer_id']
-                    # Create session data, we can access this data in other routes
-                    cursor.execute(
-                        'SELECT max(login_attempt_no) AS last_login FROM customer_login_history WHERE customer_id = %s',
-                        [id])
-                    acc_login = cursor.fetchone()
-                    # means first login
-                    if acc_login['last_login'] is None:
-                        # means first login
-                        zero = 1
-                        cursor.execute(
-                            'INSERT INTO customer_login_history (customer_id, login_attempt_no, login_time) VALUES (%s,%s,%s)',
-                            (id, zero, login_time))
-                        db.connection.commit()
-                        session['loggedin'] = True
-                        session['id'] = account['customer_id']
-                        session['name'] = account['full_name']
-                        session['email'] = account['email']
-                        session['customer_login_no'] = 1
-                        session.permanent = True
-                        app.permanent_session_lifetime = timedelta(minutes=15)
-                        # app.permanent_session_lifetime = timedelta(seconds=15)
+            if account:
+                if password == account['pw']:
+                    session['loggedin'] = True
+                    session['id'] = account['customer_id']
+                    session['name'] = account['full_name']
+                    session['email'] = account['email']
+                    session['customer_login_no'] = 1
+                    session.permanent = True
+                    app.permanent_session_lifetime = timedelta(minutes=15)
 
-                        # Redirect to home page
-                        cursor.execute(
-                            'INSERT INTO logs_info (log_id ,date_created,customer_id, description) VALUES (NULL,%s,%s,concat("authn_login_success : User ID (",%s,")"))',
-                            (login_time, id, id))
-                        db.connection.commit()
-                        return redirect(url_for('market'))
-                    # elif acc_login['last_login'] == 3 :
-                    #     flash('TOO MANY LOGIN ATTEMPTS', category='danger')
-                    #     return redirect(url_for('logout'))
-                    # means not first login
+                    return redirect(url_for('homemain'))
 
-                    else:
-                        next_login_attempt = acc_login['last_login'] + 1
-                        cursor.execute(
-                            'INSERT INTO customer_login_history (customer_id, login_attempt_no, login_time) VALUES (%s,%s,%s)',
-                            (id, next_login_attempt, login_time))
-                        db.connection.commit()
-                        session['loggedin'] = True
-                        session['id'] = account['customer_id']
-                        session['name'] = account['full_name']
-                        session['customer_login_no'] = int(next_login_attempt)
-                        # Redirect to home page
-                        cursor.execute(
-                            'INSERT INTO logs_info (log_id ,date_created,customer_id, description) VALUES (NULL,%s,%s,concat("authn_login_success : User ID (",%s,")"))',
-                            (login_time, id, id))
-                        db.connection.commit()
-
-                        return redirect(url_for('market'))
                 else:
-                    flash("Incorrect E-mail or Password, 2 tries remaining ",category='danger')
-                    failed_tries = 1
-                    attempt_time = datetime.utcnow()
-                    cursor.execute(
-                        'INSERT INTO login_limitations (customer_id, failed_attempt_tries, attempt_time, locked_time) VALUES (%s,%s,%s,NULL)',
-                        (id, failed_tries, attempt_time))
+                    flash("Incorrect E-mail or Password ",category='danger')
                     db.connection.commit()
                     return redirect(url_for('login'))
 
 
-            elif check_tries['failed_try'] < 3:
-                user_hashpwd = account['hashed_pw']
-                if bcrypt2.check_password_hash(user_hashpwd, password):
-                    id = account['customer_id']
-                    # Create session data, we can access this data in other routes
-                    cursor.execute(
-                        'SELECT max(login_attempt_no) AS last_login FROM customer_login_history WHERE customer_id = %s',
-                        [id])
-                    acc_login = cursor.fetchone()
-                    # means first login
-                    if acc_login['last_login'] is None:
-                        # means first login
-                        zero = 1
-                        cursor.execute(
-                            'INSERT INTO customer_login_history (customer_id, login_attempt_no, login_time) VALUES (%s,%s,%s)',
-                            (id, zero, login_time))
-                        db.connection.commit()
-                        session['loggedin'] = True
-                        session['id'] = account['customer_id']
-                        session['name'] = account['full_name']
-                        session['email'] = account['email']
-                        session['customer_login_no'] = 1
-                        session.permanent = True
-                        app.permanent_session_lifetime = timedelta(minutes=15)
-                        # Redirect to home page
-                        cursor.execute(
-                            'INSERT INTO logs_info (log_id ,date_created,customer_id, description) VALUES (NULL,%s,%s,concat("authn_login_success : User ID (",%s,")"))',
-                            (login_time, id, id))
-                        cursor.execute('DELETE FROM login_limitations WHERE customer_id = %s', [id])
-                        db.connection.commit()
-                        return redirect(url_for('market'))
-                    # elif acc_login['last_login'] == 3 :
-                    #     flash('TOO MANY LOGIN ATTEMPTS', category='danger')
-                    #     return redirect(url_for('logout'))
-                    # means not first login
-
-                    else:
-                        next_login_attempt = acc_login['last_login'] + 1
-                        cursor.execute(
-                            'INSERT INTO customer_login_history (customer_id, login_attempt_no, login_time) VALUES (%s,%s,%s)',
-                            (id, next_login_attempt, login_time))
-                        db.connection.commit()
-                        session['loggedin'] = True
-                        session['id'] = account['customer_id']
-                        session['name'] = account['full_name']
-                        session['customer_login_no'] = int(next_login_attempt)
-                        # Redirect to home page
-                        cursor.execute(
-                            'INSERT INTO logs_info (log_id ,date_created,customer_id, description) VALUES (NULL,%s,%s,concat("authn_login_success : User ID (",%s,")"))',
-                            (login_time, id, id))
-                        cursor.execute('DELETE FROM login_limitations WHERE customer_id = %s', [id])
-                        db.connection.commit()
-
-                        return redirect(url_for('market'))
-                else:
-                    customer_id = account['customer_id']
-                    cursor.execute(
-                        'SELECT max(failed_attempt_tries) AS failed_attempt_tries FROM login_limitations WHERE customer_id = %s',
-                        [customer_id])
-                    failed_attempt = cursor.fetchone()
-
-                    if failed_attempt['failed_attempt_tries'] is None:
-                        flash("Incorrect E-mail or Password, 2 tries remaining ")
-                        failed_tries = 1
-                        attempt_time = datetime.utcnow()
-                        cursor.execute(
-                            'INSERT INTO login_limitations (customer_id, failed_attempt_tries, attempt_time, locked_time) VALUES (%s,%s,%s,NULL)',
-                            (customer_id, failed_tries, attempt_time))
-                        db.connection.commit()
-                        return redirect(url_for('login'))
-
-                    elif failed_attempt['failed_attempt_tries'] < 2:
-                        flash("Incorrect E-mail or Password, this is your last try")
-                        failed_tries = 2
-                        attempt_time = datetime.utcnow()
-                        cursor.execute(
-                            'INSERT INTO login_limitations (customer_id, failed_attempt_tries, attempt_time, locked_time) VALUES (%s,%s,%s,NULL)',
-                            (customer_id, failed_tries, attempt_time))
-                        db.connection.commit()
-                        return redirect(url_for('login'))
-
-
-                    elif failed_attempt['failed_attempt_tries'] < 3:
-                        flash("Please Try Again in 5 Minutes", category="success")
-                        failed_tries = 3
-                        attempt_time = datetime.utcnow()
-                        retry_time2 = datetime.utcnow() + timedelta(minutes=5)
-                        cursor.execute(
-                            'INSERT INTO login_limitations (customer_id, failed_attempt_tries, attempt_time, locked_time) VALUES (%s,%s,%s,%s)',
-                            (customer_id, failed_tries, attempt_time, retry_time2))
-                        db.connection.commit()
-                    # flash("Incorrect E-mail or Password, 2 tries remaining ")
-                    # failed_tries = 1
-                    # attempt_time = datetime.utcnow()
-                    # cursor.execute(
-                    #     'INSERT INTO login_limitations (customer_id, failed_attempt_tries, attempt_time, locked_time) VALUES (%s,%s,%s,NULL)',
-                    #     (id, failed_tries, attempt_time))
-                    # db.connection.commit()
-                    # return redirect(url_for('login'))
-
-
-
-
-            else:
-                attempt_time = datetime.utcnow()
-                cursor.execute(
-                    'UPDATE login_limitations SET attempt_time = %s WHERE customer_id = %s and failed_attempt_tries = %s',
-                    (attempt_time, id, 3))
-                db.connection.commit()
-                cursor.execute('SELECT * from login_limitations where attempt_time > locked_time and customer_id = %s',
-                               [id])
-                check_time = cursor.fetchone()
-                db.connection.commit()
-                if check_time is not None:
-                    # current time has not exceeded 5mins
-                    cursor.execute('DELETE FROM login_limitations WHERE customer_id = %s', [id])
-                    db.connection.commit()
-                    user_hashpwd = account['hashed_pw']
-                    if bcrypt2.check_password_hash(user_hashpwd, password):
-                        id = account['customer_id']
-
-                        # Create session data, we can access this data in other routes
-                        cursor.execute(
-                            'SELECT max(login_attempt_no) AS last_login FROM customer_login_history WHERE customer_id = %s',
-                            [id])
-                        acc_login = cursor.fetchone()
-                        # means first login
-                        if acc_login['last_login'] is None:
-                            # means first login
-                            zero = 1
-                            cursor.execute(
-                                'INSERT INTO customer_login_history (customer_id, login_attempt_no, login_time) VALUES (%s,%s,%s)',
-                                (id, zero, login_time))
-                            db.connection.commit()
-                            session['loggedin'] = True
-                            session['id'] = account['customer_id']
-                            session['name'] = account['full_name']
-                            session['email'] = account['email']
-                            session['customer_login_no'] = 1
-                            session.permanent = True
-                            app.permanent_session_lifetime = timedelta(minutes=15)
-                            # Redirect to home page
-                            cursor.execute(
-                                'INSERT INTO logs_info (log_id ,date_created,customer_id, description) VALUES (NULL,%s,%s,concat("authn_login_success : User ID (",%s,")"))',
-                                (login_time, id, id))
-                            db.connection.commit()
-                            return redirect(url_for('market'))
-                        # elif acc_login['last_login'] == 3 :
-                        #     flash('TOO MANY LOGIN ATTEMPTS', category='danger')
-                        #     return redirect(url_for('logout'))
-                        # means not first login
-
-                        else:
-                            next_login_attempt = acc_login['last_login'] + 1
-                            cursor.execute(
-                                'INSERT INTO customer_login_history (customer_id, login_attempt_no, login_time) VALUES (%s,%s,%s)',
-                                (id, next_login_attempt, login_time))
-                            db.connection.commit()
-                            session['loggedin'] = True
-                            session['id'] = account['customer_id']
-                            session['name'] = account['full_name']
-                            session['customer_login_no'] = int(next_login_attempt)
-                            # Redirect to home page
-                            cursor.execute(
-                                'INSERT INTO logs_info (log_id ,date_created,customer_id, description) VALUES (NULL,%s,%s,concat("authn_login_success : User ID (",%s,")"))',
-                                (login_time, id, id))
-                            db.connection.commit()
-
-                            return redirect(url_for('market'))
-
-                else:
-                    flash("Please Wait for 5 Minutes, Thank You", category="success")
-                    return redirect(url_for('login'))
-        else:
-            # check for staff account
-            cursor.execute('SELECT * FROM staff_email_hash')
-            all_staff = cursor.fetchall()
-            # check if email exists
-            id = 0
-            for staff in all_staff:
-                hash = (staff['email_hash']).encode()
-                if bcrypt.checkpw(email.encode(), hash):
-                    id = staff['staff_id']
-                    break
-            # decryption of email
-            # get key
-            if id == 0:
-                # checks for admin accounts
-                cursor.execute('SELECT * from admin_accounts')
-                admin = cursor.fetchone()
-                if admin['email'] == email and admin['password'] == password:
-                    session['loggedin3'] = True
-                    session['id'] = admin['admin_id']
-                    session['name'] = admin['full_name']
-                    flash(f"Successfully logged in as {admin['full_name']}!", category="success")
-                    return redirect(url_for('admins'))
-                else:
-                    flash('invalid login details', category='danger')
-                    return redirect(url_for('login'))
-            else:
-                # This is staff account
-                cursor.execute('SELECT staff_key FROM staff_key WHERE staff_id = %s', [id])
-                columns = cursor.fetchone()
-                staff_key = columns['staff_key']
-                # Get account information
-                cursor.execute('SELECT * FROM staff_accounts WHERE staff_id = %s', [id])
-                staff = cursor.fetchone()
-                # check password hash
-                if staff and bcrypt.checkpw(password.encode(), staff['hashed_pw'].encode()):
-                    # decrypt email
-                    f = Fernet(staff_key)
-                    encrypted_email = staff['email']
-                    decrypted = f.decrypt(encrypted_email.encode())
-                    if decrypted:
-                        cursor.execute(
-                            'SELECT max(login_attempt_no) AS last_login FROM staff_login_history WHERE staff_id = %s',[id])
-                        acc_login = cursor.fetchone()
-                        # means first login so need 3fa
-                        if acc_login['last_login'] is None:
-                            # otp is a string
-                            otp = str(generateOTP())
-                            msg = Message("Hello", sender='tannathanael24@gmail.com',
-                                          recipients=[email])
-                            body = "Your OTP is " + otp
-                            msg.body = body
-                            mail.send(msg)
-                            # Encrypting OTP to put in session
-                            key = Fernet.generate_key()
-                            # storing key
-                            cursor.execute('INSERT INTO staff_otp_key VALUES (%s,%s)', (id, key.decode()))
-                            db.connection.commit()
-                            f = Fernet(key)
-                            encrypted_otp = f.encrypt(otp.encode())
-                            decoded_otp = encrypted_otp.decode()
-                            session['id'] = id
-                            # stored the otp in a session, after need to encode and key in database
-                            session['OTP'] = decoded_otp
-                            return redirect(url_for('firstloginstaff'))
-                        # means not first login
-                        else:
-                            next_login_attempt = acc_login['last_login'] + 1
-                            cursor.execute(
-                                'INSERT INTO staff_login_history (staff_id, login_attempt_no, login_time) VALUES (%s,%s,%s)',
-                                (id, next_login_attempt, login_time))
-                            db.connection.commit()
-                            session['loggedin2'] = True
-                            session['id'] = id
-                            session['name'] = staff['full_name']
-                            session['staff_login_no'] = int(next_login_attempt)
-                            flash(f"Successfully logged in as {staff['full_name']}!", category="success")
-                            return redirect(url_for('customers'))
     return render_template('login.html', form=form)
 
-
-@app.route('/forgetpassword1', methods=['GET', 'POST'])
-def forgetpassword1():
-    form = ForgetPassword(request.form)
-    if request.method == 'POST':
-        email_forget = form.email.data
-        login_time = datetime.utcnow()
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT * FROM customer_accounts WHERE email = %s', [email_forget])
-        account_forget = cursor.fetchone()
-        db.connection.commit()
-
-        if account_forget:
-            if email_forget == account_forget['email']:
-                session['fp_id'] = account_forget['customer_id']
-                session['forget_pw'] = account_forget['email']
-                db.connection.commit()
-                return redirect(url_for('forgetpassword2'))
-        else:
-            flash("Please Verify Again", category="danger")
-            return redirect(url_for('login'))
-
-    return render_template('forgetpassword.html', form=form)
-
-@app.route('/forgetpassword2', methods=['GET', 'POST'])
-def forgetpassword2():
-    # try:
-        email = session['forget_pw']
-        login_time = datetime.utcnow()
-        secret = pyotp.random_base32()
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT customer_id FROM customer_accounts WHERE email = %s', [email])
-        # Fetch one record and return result
-        id = cursor.fetchone()
-        db.connection.commit()
-
-        cursor.execute('SELECT google_otp FROM fp_google WHERE customer_id = %s', [id['customer_id']])
-        secret_otp = cursor.fetchone()
-        db.connection.commit()
-
-        if secret_otp is None:
-            cursor.execute('INSERT INTO fp_google (customer_id, google_otp) VALUES (%s,%s)', (id['customer_id'],secret))
-            db.connection.commit()
-            pass
-        else:
-            cursor.execute('UPDATE fp_google SET google_otp = %s WHERE customer_id = %s', (secret,id['customer_id']))
-            db.connection.commit()
-            pass
-
-        cursor.execute('SELECT google_otp FROM fp_google WHERE customer_id = %s', [id['customer_id']])
-        new_otp = cursor.fetchone()
-        db.connection.commit()
-
-        data = pyotp.totp.TOTP(new_otp['google_otp']).provisioning_uri(name=email)
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(data)
-        qr.make(fit=True)
-
-        img = qr.make_image(fill_color="black", back_color="white")
-        img.save('./static/images/hehe.jpg', 'JPEG')
-
-        secret_input = request.form.get("secret")
-        # getting OTP provided by user
-        otp = str(request.form.get("otp"))
-        # verifying submitted OTP with PyOTP
-        if request.method == 'POST':
-            if pyotp.TOTP(secret_input).verify(otp):
-                # inform users if OTP is valid
-                flash("The TOTP 2FA token is valid", "success")
-                cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-                cursor.execute('SELECT * FROM customer_accounts WHERE email = %s', [session['forget_pw']])
-                # Fetch one record and return result
-                account = cursor.fetchone()
-                session['id'] = account['customer_id']
-                cursor.execute('INSERT INTO logs_info (log_id ,date_created,customer_id,description) VALUES (NULL,%s,%s,concat("authn_password_change : User ID (",%s,")"))',(login_time,  id['customer_id'],  id['customer_id']))
-                db.connection.commit()
-                session['reset_password'] = 1
-                return redirect(url_for('resetpassword'))
-            else:
-                # inform users if OTP is invalid
-                flash("You have supplied an invalid 2FA token!", "danger")
-                cursor.execute('INSERT INTO logs_warning (log_id ,date_created,customer_id,description) VALUES (NULL,%s,%s,concat("authn_password_fail : User ID (",%s,")"))',(login_time, id['customer_id'] , id['customer_id']))
-                return redirect(url_for("forgetpassword2"))
-        else:
-            return render_template('forgetpassword2.html',secret=new_otp['google_otp'])
-
-
-
-@app.route('/resetpassword', methods=['GET', 'POST'])
-def resetpassword():
-    form = ResetPassword(request.form)
-    # email_forget = form.email.data
-    newpassword = form.newpassword.data
-    confirmpassword = form.confirmpassword.data
-    time = datetime.utcnow()
-
-    try:
-        id = session['reset_password']
-        if request.method == 'POST':
-            if newpassword != confirmpassword:
-                    flash('passwords do not match',category='danger')
-                    cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-                    cursor.execute('INSERT INTO logs_warning (log_id ,date_created,customer_id,description) VALUES (NULL,%s,%s,concat("authn_password_chang_fail : User ID (",%s,")"))',(time, session['id'], session['id']))
-
-                    return redirect(url_for('resetpassword'))
-
-            elif newpassword == confirmpassword:
-                    cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-                    update_hashpassword = bcrypt2.generate_password_hash(newpassword)
-                    cursor.execute('UPDATE customer_accounts SET hashed_pw = %s WHERE customer_id = %s',(update_hashpassword, session['id']))
-                    cursor.execute('INSERT INTO logs_info (log_id ,date_created,customer_id,description) VALUES (NULL,%s,%s,concat("authn_password_change_success : User ID (",%s,")"))',(time, session['id'], session['id']))
-                    db.connection.commit()
-                    flash("Successful, Password Reset", category="success")
-                    db.connection.commit()
-
-                    cursor.execute('SELECT full_name from customer_accounts WHERE customer_id = %s',[session['id']])
-                    customer_name = cursor.fetchall()
-                    cursor.execute('SELECT email from customer_accounts WHERE customer_id = %s', [session['id']])
-                    customer_email = cursor.fetchall()
-                    db.connection.commit()
-
-                    for i in customer_name:
-                        name = i['full_name']
-                    for i in customer_email:
-                        email = i['email']
-
-                    user_content = ("Hi %s, \n VALA has received a request to recover access to account (email : %s) \n If you did not make this request, please contact ADMIN IMMEDIATELY (via messages - http://127.0.0.1:5000/). \n\n Thank You! \n\n From, \n VALA TEAM" % (name,email))
-                    msg = EmailMessage()
-                    msg.set_content(" News from VALA TEAM! \n {}".format(user_content))
-                    msg["Subject"] = "Critical Security Alert"
-                    msg["From"] = auto_email
-                    msg["To"] = session['forget_pw']
-
-                    with smtplib.SMTP("smtp.gmail.com", port=587) as smtp:
-                        smtp.starttls()
-                        smtp.login(msg["From"], email_key)
-                        smtp.send_message(msg)
-
-                    session.pop('reset_password',None)
-                    return redirect(url_for('login'))
-    except:
-        flash("Please do Verification!", category="danger")
-        return redirect(url_for('login'))
-
-    return render_template('resetpassword.html',form=form)
 
 
 @app.route('/logout')
 def logout():
     if 'loggedin' in session:
-        id=session['id']
-        login_num=session['customer_login_no']
-# Remove session data, this will log the user out
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        logout_time = datetime.utcnow()
-        #Once fix this done alr
-        cursor.execute('UPDATE customer_login_history SET logout_time = %s WHERE customer_id = %s AND login_attempt_no = %s',(logout_time,id,login_num))
-        cursor.execute('INSERT INTO logs_info (log_id ,date_created,customer_id,description) VALUES (NULL,%s,%s,concat("authn_logout_success : User ID (",%s,")"))',(logout_time, id, id))
-        db.connection.commit()
         session.pop('loggedin', None)
         session.pop('id', None)
         session.pop('name', None)
         session.pop('customer_login_no',None)
-
         flash('Successfully logged out',category='success')
-        # Redirect to login page]
-        return redirect(url_for('login'))
+        return redirect(url_for('homemain'))
     else:
-        return redirect(url_for('login'))
+        flash('Unable to logged out, Try Logging In!',category='danger')
+        return redirect(url_for('homemain'))
 
 
 # @app.route('/')
@@ -809,164 +318,20 @@ def password_check(password):
         'symbol_error' : symbol_error,
     }
 
-@app.route('/updatepassword', methods=['GET', 'POST'])
-def updatePassword():
-    id=session['id']
-    form = UpdatePassword(request.form)
-    oldpassword = form.oldpassword.data
-    newpassword = form.newpassword.data
-    confirmpassword = form.confirmpassword.data
-    cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM customer_accounts WHERE customer_id = %s', [id])
-    # Fetch one record and return result
-    account = cursor.fetchone()
-    user_hashpwd = account['hashed_pw']
-    time = datetime.utcnow()
+
+# @app.route('/')
+# def home():
+#     if 'loggedin' in session:
+#         # User is loggedin show them the home page
+#         id=session['id']
+#         login_num=session['customer_login_no']
+#
+#         return render_template('home.html',id=session['id'], name=session['name'])
+# # User is not loggedin redirect to login page
+#     flash('Welcome to VALA, Please Log In or Register !',category='success')
+#     return redirect(url_for('homemain'))
 
 
-    if request.method == 'POST':
-        if newpassword == oldpassword:
-            flash('passwords cannot be equal',category='danger')
-            return redirect(url_for('updatePassword'))
-        if newpassword == confirmpassword:
-            if bcrypt2.check_password_hash(user_hashpwd, oldpassword):
-                update_hashpassword = bcrypt2.generate_password_hash(newpassword)
-                cursor.execute('UPDATE customer_accounts SET hashed_pw = %s WHERE customer_id = %s',
-                               (update_hashpassword, id))
-                cursor.execute(
-                    'INSERT INTO logs_info (log_id ,date_created,customer_id,description) VALUES (NULL,%s,%s,concat("authn_logout_success : User ID (",%s,")"))',
-                    (time, id,id))
-
-                db.connection.commit()
-                flash("Successful", category="success")
-
-                cursor.execute('SELECT full_name from customer_accounts WHERE customer_id = %s', [id])
-                customer_name = cursor.fetchall()
-                cursor.execute('SELECT email from customer_accounts WHERE customer_id = %s', [id])
-                customer_email = cursor.fetchall()
-                db.connection.commit()
-
-                for i in customer_name:
-                    name = i['full_name']
-                for i in customer_email:
-                    email = i['email']
-
-                user_content = ("Hi %s, \n VALA has received a request to recover access to account (email : %s) \n If you did not make this request, please contact ADMIN IMMEDIATELY (via messages). \n\n Thank You! \n\n From, \n VALA TEAM" % (name, email))
-                msg = EmailMessage()
-                msg.set_content("News from VALA TEAM! \n {}".format(user_content))
-                msg["Subject"] = "Critical Security Alert"
-                msg["From"] = auto_email
-                msg["To"] = email
-
-                with smtplib.SMTP("smtp.gmail.com", port=587) as smtp:
-                    smtp.starttls()
-                    smtp.login(msg["From"], email_key)
-                    smtp.send_message(msg)
-
-                return redirect(url_for('login'))
-
-
-            else:
-                flash("Same Password as Old , Try Again", category="success")
-                return redirect(url_for('updatePassword'))
-
-    
-    return render_template('updatePassword.html', form=form)
-
-
-@app.route('/delete_customer_account', methods=['GET', 'POST'])
-def delete_customer_account():
-    try:
-        id=session['id']
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('DELETE FROM messages WHERE customer_id = %s', [id])
-        cursor.execute('DELETE FROM sc_logs WHERE customer_id = %s', [id])
-        cursor.execute('DELETE FROM customer_accounts WHERE customer_id = %s', [id])
-        db.connection.commit()
-        flash("Account Has Been Deleted", category='success')
-        return redirect(url_for('login'))
-    except:
-        flash("Please Try Again", category='danger')
-        return redirect(url_for('profile'))
-
-
-@app.route('/')
-def home():
-    if 'loggedin' in session:
-        # User is loggedin show them the home page
-        id=session['id']
-        login_num=session['customer_login_no']
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT login_time FROM customer_login_history WHERE customer_id =%s and login_attempt_no =%s',(id, login_num))
-        logintime = cursor.fetchone()
-        return render_template('home.html',id=session['id'], name=session['name'],logintime=logintime)
-# User is not loggedin redirect to login page
-    flash('Welcome to VALA, Please Log In or Register !',category='success')
-    return redirect(url_for('login'))
-
-
-
-
-#base template
-@app.route('/logs_info')
-def logs_info():
-    if 'loggedin2' in session or 'loggedin3' in session:
-        try:
-            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            if cursor:
-                cursor.execute('SELECT * FROM logs_info')
-                login = cursor.fetchall()
-        except IOError:
-            print('Database problem!')
-        except Exception as e:
-            print(f'Error while connecting to MySQL,{e}')
-        finally:
-            if cursor:
-                cursor.close()
-        return render_template('dashboard.html', items=login  )
-    else:
-        flash('You are not allowed to access this page', category='danger')
-        return redirect(url_for('login'))
-
-@app.route('/logs_warning')
-def logs_warning():
-    if 'loggedin2' in session or 'loggedin3' in session:
-        try:
-            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            if cursor:
-                cursor.execute('SELECT * FROM logs_warning')
-                products = cursor.fetchall()
-        except IOError:
-            print('Database problem!')
-        except Exception as e:
-            print(f'Error while connecting to MySQL,{e}')
-        finally:
-            if cursor:
-                cursor.close()
-        return render_template('dashboard_warning.html', products = products )
-    else:
-        flash('You are not allowed to access this page', category='danger')
-        return redirect(url_for('login'))
-
-@app.route('/logs_critical')
-def logs_critical():
-    if 'loggedin2' in session or 'loggedin3' in session:
-        try:
-            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            if cursor:
-                cursor.execute('SELECT * FROM logs_critical')
-                error = cursor.fetchall()
-        except IOError:
-            print('Database problem!')
-        except Exception as e:
-            print(f'Error while connecting to MySQL,{e}')
-        finally:
-            if cursor:
-                cursor.close()
-        return render_template('dashboard_critical.html', error = error  )
-    else:
-        flash('You are not allowed to access this page', category='danger')
-        return redirect(url_for('login'))
 
 @app.route('/admins', methods=['POST','GET'])
 def admins():
@@ -1894,122 +1259,6 @@ def checkout_verification2():
         flash("Please Verify Again", category="danger")
         return redirect(url_for('page_not_found'))
 
-@app.route('/messages',methods=['GET','POST'])
-def messages():
-    form = Create_Message(request.form)
-    id = session['id']
-    if 'loggedin' in session:
-        try:
-            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            if cursor:
-                cursor.execute('SELECT * FROM messages WHERE customer_id = %s',[id])
-                messages = cursor.fetchall()
-        except IOError:
-            print('Database problem!')
-        except Exception as e:
-            print(f'Error while connecting to MySQL,{e}')
-        finally:
-            if cursor:
-                cursor.close()
-        return render_template('messages.html', items=messages, form=form)
-    else:
-        flash('Something went wrong!, please relog')
-        return redirect(url_for('login'))
-
-@app.route('/messages_admin',methods=['GET','POST'])
-def messages_admin():
-    form = Update_Message(request.form)
-    if 'loggedin2' in session or 'loggedin3' in session:
-        try:
-            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            if cursor:
-                cursor.execute('SELECT * FROM messages')
-                messages = cursor.fetchall()
-        except IOError:
-            print('Database problem!')
-        except Exception as e:
-            print(f'Error while connecting to MySQL,{e}')
-        finally:
-            if cursor:
-                cursor.close()
-        return render_template('messages_admin.html', items=messages, form=form)
-    else:
-        flash('Something went wrong!, please relog')
-        return redirect(url_for('login'))
-
-
-@app.route('/create_messages', methods=['POST','GET'])
-def create_messages():
-    form = Create_Message(request.form)
-    id = session['id']
-    try:
-        if form.validate_on_submit():
-            description = form.description.data
-            time = datetime.utcnow()
-
-            validate_ans = Validations.validate_answer(description)
-            if validate_ans is True:
-                pass
-            else:
-                flash('Answer is unacceptable', category='danger')
-                return redirect(url_for('messages'))
-
-            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('SELECT max(message_id) as message_id from messages WHERE customer_id = %s',[id])
-            message_id = cursor.fetchone()
-            db.connection.commit()
-
-            if message_id['message_id'] is None:
-                cursor.execute('INSERT INTO messages VALUES (NULL, %s, %s, %s, %s, NULL, NULL, NULL)', (1, id , description, time))
-                db.connection.commit()
-                flash("Message Added Successfully!",category="success")
-                return redirect(url_for('messages'))
-            else:
-                updated_message_id = message_id['message_id'] + 1
-                cursor.execute('INSERT INTO messages VALUES (NULL, %s, %s, %s, %s, NULL, NULL, NULL)',
-                               (updated_message_id,id, description, time))
-                db.connection.commit()
-                flash("Message Added Successfully!", category="success")
-                return redirect(url_for('messages'))
-
-
-    except Exception :
-        flash("Error Adding Products", category="danger")
-        return redirect(url_for('messages'))
-
-    return render_template('AddMessage.html', add_item_form=form)
-
-@app.route('/messages_admin/update_messages/<id>/', methods=['POST'])
-def update_messages(id):
-    form = Update_Message(request.form)
-    description = form.description.data
-    time = datetime.utcnow()
-
-    try:
-        validate_ans = Validations.validate_answer(description)
-        if validate_ans is True:
-            pass
-        else:
-            flash('Answer is unacceptable', category='danger')
-            return redirect(url_for('messages_admin'))
-
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        if cursor:
-            cursor.execute('UPDATE messages SET staff_id = %s, reply = %s, reply_time =%s WHERE index_id = %s', (1,description,time,id))
-            db.connection.commit()
-            flash("Message Replied successfully", category="success")
-        else:
-            flash('Something went wrong!')
-    except IOError:
-        print('Database problem!')
-    except Exception as e:
-        print(f'Error while connecting to MySQL,{e}')
-        flash("Error Updating Products", category="danger")
-        return redirect(url_for('messages_admin'))
-    finally:
-        cursor.close()
-        db.connection.close()
-        return redirect(url_for('messages_admin'))
 
 @app.route('/checkout/delete_checkout_products/<id>/',  methods=['POST'])
 def delete_checkout_products(id):
@@ -2272,71 +1521,53 @@ def firstchangepassword():
     else:
         flash('Please enter a new password',category='success')
     return render_template('firstchangepassword.html',form=form)
-    
-
-def check_logs():
-    try:
-        id = session['id']
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute("SELECT count(*) as warning_num from logs_warning WHERE customer_id = %s" , [id])
-        send_notice = cursor.fetchone()
-        db.connection.commit()
-        if send_notice is None:
-            pass
-        elif send_notice['warning_num'] > 15 :
-            account_sid = config['twilio']['account']
-            auth_token = config['twilio']['token']
-            client = Client(account_sid, auth_token)
-            message = client.messages.create(
-                from_= '+12182504569',
-                to="+65",
-                #  ^^ insert own number for admin
-                body= "User %s has passed warning logs stage, check on user!" % [id]
-            )
-            print(message)
-        else:
-            pass
-    except:
-        return redirect(url_for('login'))
 
 
-@app.route('/homemain')
+@app.route('/')
 def homemain():
     return render_template('homemain.html')
 
 @app.route('/donation_page')
 def donation_page():
-    form = Donation_Products()
-    return render_template('donation_page.html',form = form)
+    if 'loggedin' in session:
+        form = Donation_Products()
+        return render_template('donation_page.html',form = form)
+    else:
+        return redirect(url_for('homemain'))
+
 
 @app.route('/donation_page_create',methods=['POST','GET'])
 def donation_page_create():
     form = Donation_Products()
     try:
-        if form.validate_on_submit():
-            product_id = uuid.uuid4()
-            name = form.product_name.data
-            description = form.description.data
-            category = form.category.data
+        if 'loggedin' in session:
+            if form.validate_on_submit():
+                product_id = uuid.uuid4()
+                name = form.product_name.data
+                description = form.description.data
+                category = form.category.data
 
-            file = request.files['file']
-            if file.filename == '':
-                flash('No image selected for uploading')
-                return redirect(request.url)
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                pass
-            else:
-                flash('Allowed image types are - png, jpg, jpeg, gif', category='danger')
-                return redirect(request.url)
+                file = request.files['file']
+                if file.filename == '':
+                    flash('No image selected for uploading')
+                    return redirect(request.url)
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    pass
+                else:
+                    flash('Allowed image types are - png, jpg, jpeg, gif', category='danger')
+                    return redirect(request.url)
 
 
-            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('INSERT INTO donation VALUES (%s, %s, %s, %s,%s)', (product_id, name, filename,description,category))
-            db.connection.commit()
-            flash("Product Donated Successfully!", category="success")
-            return redirect(url_for('donation_market'))
+                cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+                cursor.execute('INSERT INTO donation VALUES (%s, %s, %s, %s,%s)', (product_id, name, filename,description,category))
+                db.connection.commit()
+                flash("Product Donated Successfully!", category="success")
+                return redirect(url_for('donation_market'))
+        else:
+            flash("Please Log In", category='danger')
+            return redirect(url_for('homemain'))
 
     except Exception:
         flash("Error Adding Products", category="danger")
@@ -2347,14 +1578,20 @@ def donation_page_create():
 @app.route('/donation_market',methods=['POST','GET'])
 def donation_market():
     try:
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT * FROM products')
-        donation = cursor.fetchall()
-        db.connection.commit()
+        if 'loggedin' in session:
+            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('SELECT * FROM products')
+            donation = cursor.fetchall()
+            db.connection.commit()
+        else:
+            flash("Please Log In", category='danger')
+            return redirect(url_for('homemain'))
+
     except IOError:
         print('Database problem!')
     except Exception as e:
         print(f'Error while connecting to MySQL,{e}')
+
 
     return render_template('donation_market.html', items=donation)
 
@@ -2362,31 +1599,35 @@ def donation_market():
 def product_market_create():
     form = Create_Market_Products()
     try:
-        if form.validate_on_submit():
-            product_id = uuid.uuid4()
-            name = form.product_name.data
-            description = form.description.data
-            price = form.price.data
-            category = form.category.data
+        if 'loggedin' in session:
+            if form.validate_on_submit():
+                product_id = uuid.uuid4()
+                name = form.product_name.data
+                description = form.description.data
+                price = form.price.data
+                category = form.category.data
 
-            file = request.files['file']
-            if file.filename == '':
-                flash('No image selected for uploading')
-                return redirect(request.url)
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                pass
-            else:
-                flash('Allowed image types are - png, jpg, jpeg, gif', category='danger')
-                return redirect(request.url)
+                file = request.files['file']
+                if file.filename == '':
+                    flash('No image selected for uploading')
+                    return redirect(request.url)
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    pass
+                else:
+                    flash('Allowed image types are - png, jpg, jpeg, gif', category='danger')
+                    return redirect(request.url)
 
-            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('INSERT INTO products VALUES (%s, %s, %s, %s,%s,%s)',
-                           (product_id, name, price, description, filename,category))
-            db.connection.commit()
-            flash("Product Donated Successfully!", category="success")
-            return redirect(url_for('donation_market'))
+                cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+                cursor.execute('INSERT INTO products VALUES (%s, %s, %s, %s,%s,%s)',
+                               (product_id, name, price, description, filename,category))
+                db.connection.commit()
+                flash("Product Donated Successfully!", category="success")
+                return redirect(url_for('donation_market'))
+        else:
+            flash("Please Log In", category='danger')
+            return redirect(url_for('homemain'))
 
     except Exception:
         flash("Error Adding Products", category="danger")
@@ -2406,13 +1647,17 @@ def donation_market_products(id):
 @app.route('/donation_market_products_indv')
 def donation_market_products_indv():
     try:
-        id = session['p_id']
-        cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT * FROM products WHERE product_id = %s',[id])
-        indv_products = cursor.fetchall()
-        db.connection.commit()
-        session.pop('p_id', None)
-        return render_template('view_products.html', items=indv_products)
+        if 'loggedin' in session:
+            id = session['p_id']
+            cursor = db.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('SELECT * FROM products WHERE product_id = %s',[id])
+            indv_products = cursor.fetchall()
+            db.connection.commit()
+            session.pop('p_id', None)
+            return render_template('view_products.html', items=indv_products)
+        else:
+            flash("Please Log In", category='danger')
+            return redirect(url_for('homemain'))
     except:
         flash("Click on Products you want to view", category='danger')
         return redirect(url_for('donation_market'))
