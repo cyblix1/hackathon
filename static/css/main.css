@@ -1916,30 +1916,22 @@ section {
   width: 100%;
   position: relative;
   background: var(--color-primary);
-  padding: 100px 0 0 0;
+  padding: 200px 0 0 0;
 }
-
 .video-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
+  position: absolute;
+  min-width: 100%;
+  min-height: 100%;
+  right: 0;
+  bottom: 0;
+  text-align: center;
 }
 
 @media (min-width: 1365px) {
   .hero {
     background-attachment: fixed;
   }
-  .video-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
 }
-}
-
 
 .hero h2 {
   font-size: 48px;
