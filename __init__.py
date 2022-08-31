@@ -2372,7 +2372,9 @@ def donation_market():
 
     return render_template('donation_market.html', items=products)
 
-
+@app.route('/testmain')
+def testmain():
+    return render_template('testmain.html')
 
 if __name__ == '__main__':
     app.run(debug=True)

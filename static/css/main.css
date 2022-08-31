@@ -1916,7 +1916,15 @@ section {
   width: 100%;
   position: relative;
   background: var(--color-primary);
-  padding: 60px 0 0 0;
+  padding: 100px 0 0 0;
+}
+
+.video-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
 }
 
 @media (min-width: 1365px) {
