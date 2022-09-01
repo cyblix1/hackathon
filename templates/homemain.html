@@ -49,7 +49,7 @@
         <a href="#" class="twitter"><i class="bi bi-twitter"></i></a>
         <a href="#" class="facebook"><i class="bi bi-facebook"></i></a>
         <a href="#" class="instagram"><i class="bi bi-instagram"></i></a>
-        <a href="#" class="linkedin"><i class="bi bi-linkedin"></i></i></a>
+        <a href="{{ url_for('logout')}}" class=""><i class="bi ">Log Out</i></i></a>
       </div>
     </div>
   </section><!-- End Top Bar -->
@@ -67,9 +67,9 @@
           <li><a href="#hero">Home</a></li>
           <li><a href="#about">About</a></li>
           <li><a href="#services">Services</a></li>
-          <li><a href="#portfolio">Portfolio</a></li>
           <li><a href="{{ url_for('donation_market')}}">Marketplace</a></li>
           <li><a href="{{ url_for('donation_page_create')}}">Donate Now</a></li>
+          <li><a href="{{ url_for('login')}}">Login/Register</a></li>
         </ul>
       </nav><!-- .navbar -->
 
@@ -102,7 +102,7 @@
           <h2>Welcome to <span>Impact</span></h2>
           <p><b>We aim to reduce climate change</b></p>
           <div class="d-flex justify-content-center justify-content-lg-start">
-            <a href="#about" class="btn-get-started">Marketplace</a>
+            <a href="{{ url_for('donation_market')}}" class="btn-get-started">Marketplace</a>
           </div>
         </div>
   
