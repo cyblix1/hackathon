@@ -1,10 +1,13 @@
 #wrapper {
     text-align: center;
-    background-color: gold;
-    color: gold;
+    background-image: url(static/img/image-2.jpg);
 }
 
 #content-wrapper {
     text-align: center;
-    background-color: gold;
+    background-image: url(static/img/image-2.jpg);
+}
+
+#content {
+    background-image: url(static/img/image-2.jpg);
 }
